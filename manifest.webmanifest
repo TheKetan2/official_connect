@@ -28,6 +28,36 @@
       "purpose": "any"
     }
   ],
+  "shortcuts": [
+    {
+      "name": "Add Group",
+      "short_name": "Add Group",
+      "description": "Add an official WhatsApp group",
+      "url": "./?action=add-group",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Add Contact",
+      "short_name": "Add Contact",
+      "description": "Add an important contact",
+      "url": "./?action=add-contact",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "New Note",
+      "short_name": "New Note",
+      "description": "Create a new work note",
+      "url": "./?action=add-note",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Import WhatsApp",
+      "short_name": "Import",
+      "description": "Import WhatsApp links and contacts",
+      "url": "./?action=import",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+    }
+  ],
   "share_target": {
     "action": "./",
     "method": "GET",

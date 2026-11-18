@@ -10,7 +10,10 @@
   <div class="app-shell">
     <header class="topbar">
       <div class="brand"><div class="brand-mark">OC</div><div><div class="brand-name">Official Connect</div><div class="brand-sub">Your work. Your channels.</div></div></div>
-      <div style="display:flex;gap:8px;">
+      <div class="topbar-actions">
+        <button class="icon-btn" id="themeToggleBtn" title="Toggle Dark/Light Mode" aria-label="Toggle Dark/Light Mode">🌙</button>
+        <button class="icon-btn" id="openQrBtn" title="Scan QR Code" aria-label="Scan QR Code">📷</button>
+        <button class="icon-btn" id="openLockSettingsBtn" title="Security & App Lock" aria-label="Security & App Lock">🔒</button>
         <button class="icon-btn" id="openImportBtn" title="Import from WhatsApp" aria-label="Import from WhatsApp">📥</button>
         <button class="icon-btn" id="backupBtn" title="Backup and restore" aria-label="Backup and restore">⇧</button>
       </div>
@@ -25,21 +28,65 @@
         <div class="browse-grid"><button class="browse-tile" data-go="groups"><span>▤</span><b>Groups</b><small>Official WhatsApp groups</small></button><button class="browse-tile" data-go="contacts"><span>♙</span><b>Contacts</b><small>People you work with</small></button><button class="browse-tile" data-go="favourites"><span>★</span><b>Favourites</b><small>Your priority list</small></button><button class="browse-tile" data-go="notes"><span>▧</span><b>Notes</b><small>Useful work information</small></button></div>
         <div class="privacy-note"><span>⌑</span><div><b>Private by design</b><small>Your directory and notes stay on this device. WhatsApp messages remain in WhatsApp.</small></div></div>
       </section>
-      <section id="page-groups" class="page"><div class="page-head"><div><div class="eyebrow">DIRECTORY</div><h1>Official groups</h1><p>Open only the WhatsApp groups you need.</p></div><div style="display:flex;gap:8px;"><button class="secondary-btn" data-action="quick-import">📥 Import</button><button class="primary-btn" id="addGroup">＋ Add</button></div></div><div class="search-wrap"><span>⌕</span><input id="groupSearch" placeholder="Search groups or departments"></div><div id="groupsList" class="stack"></div></section>
-      <section id="page-contacts" class="page"><div class="page-head"><div><div class="eyebrow">DIRECTORY</div><h1>Important contacts</h1><p>Keep key officials one tap away.</p></div><div style="display:flex;gap:8px;"><button class="secondary-btn" data-action="quick-import">📥 Import</button><button class="primary-btn" id="addContact">＋ Add</button></div></div><div class="search-wrap"><span>⌕</span><input id="contactSearch" placeholder="Search name, designation or department"></div><div id="contactsList" class="stack"></div></section>
+      <section id="page-groups" class="page">
+        <div class="page-head"><div><div class="eyebrow">DIRECTORY</div><h1>Official groups</h1><p>Open only the WhatsApp groups you need.</p></div><div style="display:flex;gap:8px;"><button class="secondary-btn" data-action="quick-import">📥 Import</button><button class="primary-btn" id="addGroup">＋ Add</button></div></div>
+        <div class="search-wrap"><span>⌕</span><input id="groupSearch" placeholder="Search groups or departments"></div>
+        <div class="filter-chips" id="groupDeptFilter" style="display:none;"></div>
+        <div id="groupsList" class="stack"></div>
+      </section>
+      <section id="page-contacts" class="page">
+        <div class="page-head"><div><div class="eyebrow">DIRECTORY</div><h1>Important contacts</h1><p>Keep key officials one tap away.</p></div><div style="display:flex;gap:8px;"><button class="secondary-btn" data-action="quick-import">📥 Import</button><button class="primary-btn" id="addContact">＋ Add</button></div></div>
+        <div class="search-wrap"><span>⌕</span><input id="contactSearch" placeholder="Search name, designation or department"></div>
+        <div class="filter-chips" id="contactDeptFilter" style="display:none;"></div>
+        <div id="contactsList" class="stack"></div>
+      </section>
       <section id="page-favourites" class="page"><div class="page-head"><div><div class="eyebrow">PRIORITY ACCESS</div><h1>Favourites</h1><p>Your most frequently used groups and contacts.</p></div></div><div id="favouritesList" class="stack"></div></section>
-      <section id="page-notes" class="page"><div class="page-head"><div><div class="eyebrow">PERSONAL WORKSPACE</div><h1>Work notes</h1><p>Keep important details and tasks close at hand.</p></div><button class="primary-btn" id="addNote">＋ Add</button></div><div class="search-wrap"><span>⌕</span><input id="noteSearch" placeholder="Search your notes"></div><div class="filter-chips" id="noteStatusFilter"><button class="chip active" data-filter="all">All <span class="chip-count" id="count-all">0</span></button><button class="chip chip-unfinished" data-filter="unfinished">⏳ Unfinished <span class="chip-count" id="count-unfinished">0</span></button><button class="chip chip-in_progress" data-filter="in_progress">🔄 In Progress <span class="chip-count" id="count-in_progress">0</span></button><button class="chip chip-finished" data-filter="finished">✅ Finished <span class="chip-count" id="count-finished">0</span></button></div><div id="notesList" class="stack"></div></section>
+      <section id="page-notes" class="page"><div class="page-head"><div><div class="eyebrow">PERSONAL WORKSPACE</div><h1>Work notes</h1><p>Keep important details, VC links and tasks close at hand.</p></div><button class="primary-btn" id="addNote">＋ Add</button></div><div class="search-wrap"><span>⌕</span><input id="noteSearch" placeholder="Search your notes"></div><div class="filter-chips" id="noteStatusFilter"><button class="chip active" data-filter="all">All <span class="chip-count" id="count-all">0</span></button><button class="chip chip-unfinished" data-filter="unfinished">⏳ Unfinished <span class="chip-count" id="count-unfinished">0</span></button><button class="chip chip-in_progress" data-filter="in_progress">🔄 In Progress <span class="chip-count" id="count-in_progress">0</span></button><button class="chip chip-finished" data-filter="finished">✅ Finished <span class="chip-count" id="count-finished">0</span></button></div><div id="notesList" class="stack"></div></section>
     </main>
     <nav class="bottom-nav" aria-label="Main navigation"><button class="nav-item active" data-page="home"><span>⌂</span><small>Home</small></button><button class="nav-item" data-page="groups"><span>▤</span><small>Groups</small></button><button class="nav-item" data-page="contacts"><span>♙</span><small>Contacts</small></button><button class="nav-item" data-page="favourites"><span>★</span><small>Favourites</small></button><button class="nav-item" data-page="notes"><span>▧</span><small>Notes</small></button></nav>
   </div>
+
+  <!-- Entry Editor Dialog -->
   <dialog id="editor"><form method="dialog" id="editorForm"><div class="modal-head"><div><div class="eyebrow" id="modalEyebrow">NEW ENTRY</div><h2 id="modalTitle">Add group</h2></div><button type="button" class="icon-btn" id="closeModal">×</button></div><div id="formFields"></div><div class="modal-actions"><button type="button" class="danger-btn" id="deleteEntry" hidden>Delete</button><span class="modal-spacer"></span><button type="button" class="secondary-btn" id="cancelModal">Cancel</button><button type="submit" class="primary-btn">Save</button></div></form></dialog>
-  <dialog id="backupDialog"><div class="modal-head"><div><div class="eyebrow">YOUR DATA</div><h2>Backup & restore</h2></div><button class="icon-btn" id="closeBackup">×</button></div><p class="muted">Export your groups, contacts, favourites and notes to a JSON file. Keep the file somewhere safe.</p><div class="backup-actions"><button class="primary-btn full" id="exportBtn">↓ Export backup</button><label class="secondary-btn full file-label">↑ Import backup<input type="file" id="importFile" accept="application/json,.json" hidden></label></div><p class="tiny-warning">Importing a backup replaces the data currently stored in this app.</p></dialog>
+
+  <!-- Backup & Restore Dialog (JSON & CSV) -->
+  <dialog id="backupDialog"><div class="modal-head"><div><div class="eyebrow">DATA MANAGEMENT</div><h2>Backup & restore</h2></div><button class="icon-btn" id="closeBackup">×</button></div><p class="muted">Export or import your complete directory, notes, and preferences.</p><div class="backup-actions"><button class="primary-btn full" id="exportBtn">↓ Export full backup (JSON)</button><label class="secondary-btn full file-label">↑ Import full backup (JSON)<input type="file" id="importFile" accept="application/json,.json" hidden></label></div><div style="border-top:1px solid var(--line);margin:16px 0;padding-top:14px;"><div class="eyebrow" style="margin-bottom:8px;">EXCEL & SPREADSHEETS (CSV)</div><div class="backup-actions" style="margin-top:10px;"><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;"><button class="secondary-btn" id="exportCsvBtn">↓ Contacts (.csv)</button><button class="secondary-btn" id="exportGroupsCsvBtn">↓ Groups (.csv)</button></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;"><label class="secondary-btn file-label" style="text-align:center;">↑ Import Contacts<input type="file" id="importCsvFile" accept=".csv,text/csv" hidden></label><label class="secondary-btn file-label" style="text-align:center;">↑ Import Groups<input type="file" id="importGroupsCsvFile" accept=".csv,text/csv" hidden></label></div></div></div><p class="tiny-warning">Importing a full JSON backup replaces existing records.</p></dialog>
+
+  <!-- WhatsApp Smart Import Dialog -->
   <dialog id="importDialog"><div class="modal-head"><div><div class="eyebrow">WHATSAPP IMPORT</div><h2>Import from WhatsApp</h2></div><button class="icon-btn" id="closeImport">×</button></div><p class="muted">Paste forwarded WhatsApp messages, group invite links, phone numbers, or upload a .vcf contact file / chat export .txt.</p><div class="field"><label for="importTextInput">Paste message or text</label><textarea id="importTextInput" placeholder="Example:
 Follow this link to join my WhatsApp group:
 https://chat.whatsapp.com/AbCdEfGh1234567890
 
 Or contact details:
 Dr. Ramesh Sharma, Director: +91 98765 43210"></textarea></div><div class="import-button-row"><button type="button" class="primary-btn" id="parseTextBtn">⚡ Detect & Extract</button><label class="secondary-btn file-label" style="display:inline-flex;align-items:center;">📁 Upload .vcf or .txt<input type="file" id="importContactFile" accept=".vcf,.txt,text/vcard,text/plain" hidden></label></div><div id="importResults" class="stack" style="margin-top:16px;"></div><div class="modal-actions" id="importActions" style="display:none;"><button type="button" class="secondary-btn" id="clearImportBtn">Clear</button><button type="button" class="primary-btn" id="saveAllImportBtn">Import All Detected</button></div></dialog>
+
+  <!-- Formal Dispatch Dialog -->
+  <dialog id="dispatchDialog"><div class="modal-head"><div><div class="eyebrow">FORMAL DISPATCH</div><h2 id="dispatchName">Contact Name</h2></div><button type="button" class="icon-btn" id="closeDispatch">×</button></div><div id="dispatchSub" class="muted" style="margin-bottom:14px;"></div><div class="eyebrow" style="margin-bottom:8px;">QUICK OFFICIAL TEMPLATES</div><div class="dispatch-templates stack" id="dispatchTemplates"></div><div class="field" style="margin-top:16px;"><label for="customDispatchText">Or compose custom message</label><textarea id="customDispatchText" placeholder="Type official message to send on WhatsApp..."></textarea></div><div class="modal-actions"><button type="button" class="secondary-btn" id="openBlankChatBtn">💬 Blank Chat</button><button type="button" class="primary-btn" id="sendCustomDispatchBtn">🚀 Send</button></div></dialog>
+
+  <!-- In-App Camera QR Code Scanner Dialog -->
+  <dialog id="qrDialog"><div class="modal-head"><div><div class="eyebrow">CAMERA SCANNER</div><h2>Scan WhatsApp QR</h2></div><button type="button" class="icon-btn" id="closeQr">×</button></div><p class="muted">Scan WhatsApp group invitation QR codes or contact QR codes from circulars, posters, or screens.</p><div class="qr-viewport-wrap"><video id="qrVideo" playsinline autoplay muted></video><div class="qr-frame"><div class="qr-laser"></div></div></div><div style="display:flex;justify-content:center;gap:10px;margin-top:14px;"><label class="secondary-btn file-label" style="font-size:11px;">📁 Or Upload Image with QR<input type="file" id="qrFileInput" accept="image/*" hidden></label></div><div id="qrStatus" class="qr-status-msg">Align QR code inside the box to scan</div></dialog>
+
+  <!-- Security & App Lock Dialog -->
+  <dialog id="securityDialog"><div class="modal-head"><div><div class="eyebrow">PRIVACY & PROTECTION</div><h2>App Lock & PIN</h2></div><button class="icon-btn" id="closeSecurity">×</button></div><p class="muted">Protect your official directory, contacts, and work notes with a 4-digit PIN or device biometrics.</p><div class="field"><label class="check-row" style="font-weight:700;"><input type="checkbox" id="lockEnabledCheckbox"> Enable App Lock on Launch</label></div><div id="pinConfigSection" style="display:none;"><div class="field"><label for="newPinInput">Set 4-Digit PIN</label><input type="password" id="newPinInput" maxlength="4" inputmode="numeric" placeholder="Enter 4 digits" pattern="[0-9]{4}"></div><div class="field"><label for="confirmPinInput">Confirm PIN</label><input type="password" id="confirmPinInput" maxlength="4" inputmode="numeric" placeholder="Re-enter 4 digits" pattern="[0-9]{4}"></div><div class="field" id="bioRow" style="display:none;"><label class="check-row"><input type="checkbox" id="bioEnabledCheckbox"> Use Device Biometrics (Fingerprint / Face)</label></div><div class="modal-actions"><button type="button" class="primary-btn" id="savePinBtn">Save Security Settings</button></div></div></dialog>
+
+  <!-- Fullscreen App Lock Screen Overlay -->
+  <div id="lockScreen" class="lock-screen" style="display:none;">
+    <div class="lock-card">
+      <div class="brand-mark" style="margin:0 auto 12px;width:48px;height:48px;font-size:16px;">OC</div>
+      <h2>Official Connect</h2>
+      <p class="muted" style="margin:4px 0 16px;">Enter your 4-digit security PIN</p>
+      <div class="pin-dots" id="pinDots"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+      <div class="pin-keypad" id="pinKeypad">
+        <button type="button" class="key-btn" data-key="1">1</button><button type="button" class="key-btn" data-key="2">2</button><button type="button" class="key-btn" data-key="3">3</button>
+        <button type="button" class="key-btn" data-key="4">4</button><button type="button" class="key-btn" data-key="5">5</button><button type="button" class="key-btn" data-key="6">6</button>
+        <button type="button" class="key-btn" data-key="7">7</button><button type="button" class="key-btn" data-key="8">8</button><button type="button" class="key-btn" data-key="9">9</button>
+        <button type="button" class="key-btn special-key" id="bioUnlockBtn" title="Biometric unlock">👆</button>
+        <button type="button" class="key-btn" data-key="0">0</button>
+        <button type="button" class="key-btn special-key" id="pinBackspaceBtn" title="Backspace">⌫</button>
+      </div>
+    </div>
+  </div>
+
   <div id="toast" class="toast" role="status"></div>
   <script src="app.js"></script>
 </body></html>

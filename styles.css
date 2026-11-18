@@ -36,3 +36,66 @@
 .status-badge.unfinished .status-dot{background:#f59e0b}
 .status-badge.in_progress .status-dot{background:#3b82f6}
 .status-badge.finished .status-dot{background:#10b981}
+
+/* Dispatch Modal & Template Styling */
+.dispatch-templates{display:grid;gap:8px;max-height:220px;overflow-y:auto;padding-right:2px}
+.template-item{border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:#fff;text-align:left;cursor:pointer;font-size:12px;line-height:1.45;color:var(--ink);transition:all .15s ease}
+.template-item:hover{border-color:var(--green);background:var(--green2)}
+.mini-btn.msg{background:#e7f2ed;color:var(--green)}
+
+/* Dark Theme (Executive Slate) */
+body.theme-dark{
+  --paper:#0f1715;
+  --white:#14201c;
+  --ink:#edf3f0;
+  --muted:#8b9d94;
+  --line:#22332c;
+  --green:#10b981;
+  --green2:#15382c;
+  --shadow:0 12px 35px rgba(0,0,0,.45);
+}
+body.theme-dark .app-shell{background:var(--paper)}
+body.theme-dark .topbar{background:rgba(20,32,28,.92);border-color:var(--line)}
+body.theme-dark .icon-btn{background:#1a2b25;color:var(--green)}
+body.theme-dark .bottom-nav{background:rgba(20,32,28,.95);border-color:var(--line)}
+body.theme-dark .nav-item{color:#768a80}
+body.theme-dark .stat-card,body.theme-dark .item-card,body.theme-dark .browse-tile,body.theme-dark .template-item,body.theme-dark .chip,body.theme-dark .import-card{background:#15231e;border-color:var(--line)}
+body.theme-dark .search-wrap{background:#15231e;border-color:var(--line)}
+body.theme-dark .search-wrap input{background:transparent;color:var(--ink)}
+body.theme-dark dialog{background:#15231e;color:var(--ink);border:1px solid var(--line)}
+body.theme-dark .field input,body.theme-dark .field textarea,body.theme-dark .field select{background:#111c18;color:var(--ink);border-color:var(--line)}
+body.theme-dark .secondary-btn{background:#1b2f27;color:var(--green)}
+body.theme-dark .privacy-note{background:#132820;color:var(--green)}
+body.theme-dark .privacy-note small{color:#8ea398}
+body.theme-dark .mini-btn{background:#1b2d26;color:#8ba096}
+body.theme-dark .key-btn{background:#172722;border-color:var(--line);color:var(--ink)}
+
+/* Topbar actions */
+.topbar-actions{display:flex;gap:6px;align-items:center}
+.topbar-actions .icon-btn{width:36px;height:36px;font-size:17px;border-radius:10px}
+
+/* Video Conference (VC) Link Button */
+.vc-badge{background:#eef2ff;color:#4338ca;border:1px solid #c7d2fe;border-radius:8px;padding:4px 10px;font-size:11px;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:5px;margin-top:8px;width:fit-content;transition:all .15s ease}
+.vc-badge:hover{background:#4338ca;color:#fff}
+body.theme-dark .vc-badge{background:#1e1b4b;color:#a5b4fc;border-color:#3730a3}
+
+/* In-App Camera QR Code Scanner */
+.qr-viewport-wrap{position:relative;width:100%;height:250px;background:#000;border-radius:16px;overflow:hidden;display:flex;align-items:center;justify-content:center}
+#qrVideo{width:100%;height:100%;object-fit:cover}
+.qr-frame{position:absolute;width:170px;height:170px;border:3px solid var(--green);border-radius:16px;box-shadow:0 0 0 1000px rgba(0,0,0,.45);pointer-events:none}
+.qr-laser{position:absolute;top:0;left:0;right:0;height:2px;background:var(--green);box-shadow:0 0 8px var(--green);animation:qrScan 2s ease-in-out infinite}
+@keyframes qrScan{0%{top:4px}50%{top:calc(100% - 6px)}100%{top:4px}}
+.qr-status-msg{text-align:center;font-size:11px;color:var(--muted);margin-top:10px}
+
+/* App Lock & Keypad Overlay */
+.lock-screen{position:fixed;inset:0;z-index:99999;background:var(--paper);display:flex;align-items:center;justify-content:center;padding:20px}
+.lock-card{text-align:center;width:min(320px,92vw)}
+.pin-dots{display:flex;justify-content:center;gap:14px;margin-bottom:26px}
+.pin-dots .dot{width:14px;height:14px;border-radius:50%;border:2px solid var(--muted);transition:all .18s cubic-bezier(.4,0,.2,1)}
+.pin-dots .dot.filled{background:var(--green);border-color:var(--green);transform:scale(1.15)}
+.pin-keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;max-width:250px;margin:auto}
+.key-btn{height:54px;width:54px;margin:auto;border-radius:50%;border:1px solid var(--line);background:var(--white);font:700 20px 'Manrope',sans-serif;color:var(--ink);cursor:pointer;display:grid;place-items:center;transition:all .1s ease}
+.key-btn:active{transform:scale(.92);background:var(--green2)}
+.key-btn.special-key{font-size:16px;color:var(--muted)}
+@keyframes shakeLock{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
+.shake{animation:shakeLock .4s ease}
