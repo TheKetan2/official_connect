@@ -1035,6 +1035,36 @@ $('#importNotesCsvFile').onchange=async e=>{
     }
 
     if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{});
+
+    // In-App PWA Install Prompt Banner
+    let deferredInstallPrompt=null;
+    window.addEventListener('beforeinstallprompt',e=>{
+      e.preventDefault();
+      deferredInstallPrompt=e;
+      const banner=$('#installBanner');
+      if(banner) banner.style.display='flex';
+    });
+
+    const installBtn=$('#installAppBtn');
+    if(installBtn){
+      installBtn.onclick=async()=>{
+        if(!deferredInstallPrompt) return;
+        deferredInstallPrompt.prompt();
+        const {outcome}=await deferredInstallPrompt.userChoice;
+        if(outcome==='accepted'){
+          const banner=$('#installBanner');
+          if(banner) banner.style.display='none';
+          toast('App installed to home screen!');
+        }
+        deferredInstallPrompt=null;
+      };
+    }
+
+    window.addEventListener('appinstalled',()=>{
+      const banner=$('#installBanner');
+      if(banner) banner.style.display='none';
+      toast('Official Connect is now installed');
+    });
   }catch(e){
     console.error(e);
     toast('Storage unavailable in this browser');
