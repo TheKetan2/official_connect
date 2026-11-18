@@ -79,6 +79,7 @@ function itemCard(x,type){
         <div class="note-meta">Updated ${new Date(x.updated||Date.now()).toLocaleDateString()}</div>
       </div>
       <div class="item-actions">
+        <button class="mini-btn" data-copy-note="${x.id}" title="Copy note text">📋</button>
         <button class="mini-btn" data-edit="${x.id}" title="Edit">✎</button>
       </div>
     </article>`;
@@ -93,8 +94,8 @@ function itemCard(x,type){
 
   let subtitle=[x.designation,x.department].filter(Boolean).join(' · ')||x.category||'';
   let actions=type==='contact'
-    ? `<button class="mini-btn ${x.favorite?'star':''}" data-fav="${x.id}" title="${x.favorite?'Remove favourite':'Add favourite'}">${x.favorite?'★':'☆'}</button><button class="mini-btn msg" data-dispatch="${x.id}" title="Formal message dispatch">✉</button><button class="mini-btn" data-edit="${x.id}" title="Edit">✎</button><button class="mini-btn open" data-open="${x.id}" title="Open blank WhatsApp chat">↗</button>`
-    : `<button class="mini-btn ${x.favorite?'star':''}" data-fav="${x.id}" title="${x.favorite?'Remove favourite':'Add favourite'}">${x.favorite?'★':'☆'}</button><button class="mini-btn" data-edit="${x.id}" title="Edit">✎</button><button class="mini-btn open" data-open="${x.id}" title="Open in WhatsApp">↗</button>`;
+    ? `<button class="mini-btn ${x.favorite?'star':''}" data-fav="${x.id}" title="${x.favorite?'Remove favourite':'Add favourite'}">${x.favorite?'★':'☆'}</button><button class="mini-btn msg" data-dispatch="${x.id}" title="Formal message dispatch">✉</button><button class="mini-btn call" data-call="${esc(x.phone)}" title="Direct voice call">📞</button><button class="mini-btn" data-edit="${x.id}" title="Edit">✎</button><button class="mini-btn open" data-open="${x.id}" title="Open blank WhatsApp chat">↗</button>`
+    : `<button class="mini-btn ${x.favorite?'star':''}" data-fav="${x.id}" title="${x.favorite?'Remove favourite':'Add favourite'}">${x.favorite?'★':'☆'}</button><button class="mini-btn" data-copy-link="${esc(x.link)}" title="Copy group invite link">🔗</button><button class="mini-btn" data-edit="${x.id}" title="Edit">✎</button><button class="mini-btn open" data-open="${x.id}" title="Open in WhatsApp">↗</button>`;
 
   return `<article class="item-card">
     <div class="item-icon">${type==='group'?'▤':initials(x.name)}</div>
@@ -172,7 +173,12 @@ function openEditor(type,item=null){
   const s=schemas[type];
   $('#modalEyebrow').textContent=item?'EDIT ENTRY':'NEW ENTRY';
   $('#modalTitle').textContent=item?'Edit '+type:s.title;
-  $('#formFields').innerHTML=s.fields.map(([key,label,input,required,options])=>{
+  
+  const pickPhoneBtn=(type==='contact'&&!item&&'contacts' in navigator&&'ContactsManager' in window)
+    ? '<button type="button" class="secondary-btn full" id="editorPickContactBtn" style="margin-bottom:12px;">📱 Choose from Phone Contacts</button>'
+    : '';
+
+  $('#formFields').innerHTML=pickPhoneBtn + s.fields.map(([key,label,input,required,options])=>{
     if(input==='textarea'){
       return `<div class="field"><label for="f-${key}">${label}${required?' *':''}</label><textarea id="f-${key}" name="${key}" ${required?'required':''}>${esc(item?.[key]||'')}</textarea></div>`;
     }
@@ -183,6 +189,24 @@ function openEditor(type,item=null){
     }
     return `<div class="field"><label for="f-${key}">${label}${required?' *':''}</label><input id="f-${key}" name="${key}" type="${input}" value="${esc(item?.[key]||'')}" ${required?'required':''} ${key==='phone'?'inputmode="tel"':key==='link'?'inputmode="url" autocapitalize="none"':''}></div>`;
   }).join('')+`<div class="field-hint">${s.hint||''}</div>`+(type!=='note'?`<label class="check-row"><input type="checkbox" name="favorite" ${item?.favorite?'checked':''}> Add to Favourites</label>`:'');
+
+  const edPickBtn=$('#editorPickContactBtn');
+  if(edPickBtn){
+    edPickBtn.onclick=async()=>{
+      const picked=await pickDeviceContacts('single');
+      if(!picked.length) return;
+      const c=picked[0];
+      const name=(c.name&&c.name[0])?c.name[0].trim():'';
+      const rawPhone=(c.tel&&c.tel[0])?c.tel[0].trim():'';
+      const digits=rawPhone.replace(/\D/g,'');
+      if(name) $('#f-name').value=name;
+      if(digits.length>=10){
+        $('#f-phone').value=rawPhone.startsWith('+')?rawPhone:'+91 '+digits.slice(-10);
+      }
+      toast('Filled contact details from phone');
+    };
+  }
+
   $('#deleteEntry').hidden=!item;
   $('#editor').showModal();
 }
@@ -667,10 +691,88 @@ $('#savePinBtn').onclick=()=>{
   toast('App lock PIN saved successfully');
 };
 
+// Native Device Contact Picker (Chrome on Android)
+async function pickDeviceContacts(mode='multiple'){
+  if(!('contacts' in navigator && 'ContactsManager' in window)){
+    toast('Native Contact Picker is supported on Android Chrome. On other devices, upload a .vcf contact card or CSV.');
+    return [];
+  }
+  try{
+    const props=['name','tel'];
+    const opts={multiple:mode==='multiple'};
+    const contacts=await navigator.contacts.select(props, opts);
+    return contacts||[];
+  }catch(err){
+    if(err.name!=='AbortError'){
+      toast('Could not open phone contacts: '+(err.message||'permission required'));
+    }
+    return [];
+  }
+}
+
+async function handleBatchPhoneContactPick(){
+  const picked=await pickDeviceContacts('multiple');
+  if(!picked.length) return;
+  let added=0;
+  for(const c of picked){
+    const name=(c.name&&c.name[0])?c.name[0].trim():'Contact';
+    const rawPhone=(c.tel&&c.tel[0])?c.tel[0].trim():'';
+    const digits=rawPhone.replace(/\D/g,'');
+    if(digits.length>=10){
+      const phone=rawPhone.startsWith('+')?rawPhone:'+91 '+digits.slice(-10);
+      await put({
+        type:'contact',
+        id:uid(),
+        name,
+        designation:'',
+        department:'Phone Contacts',
+        phone,
+        favorite:false,
+        updated:Date.now()
+      });
+      added++;
+    }
+  }
+  if(added>0){
+    toast(`Added ${added} contact${added>1?'s':''} from phone`);
+    render();
+  } else {
+    toast('No valid mobile numbers found in selected contact(s).');
+  }
+}
+
+const pickBtn=$('#pickContactBtn');
+if(pickBtn) pickBtn.onclick=handleBatchPhoneContactPick;
+const importPickBtn=$('#importPickContactsBtn');
+if(importPickBtn) importPickBtn.onclick=handleBatchPhoneContactPick;
+
 // General click handlers
 document.addEventListener('click',async e=>{
   const goEl=e.target.closest('[data-go]'),edit=e.target.closest('[data-edit]'),fav=e.target.closest('[data-fav]'),op=e.target.closest('[data-open]'),disp=e.target.closest('[data-dispatch]');
-  const cycle=e.target.closest('[data-cycle-status]');
+  const cycle=e.target.closest('[data-cycle-status]'),callBtn=e.target.closest('[data-call]'),copyLink=e.target.closest('[data-copy-link]'),copyNote=e.target.closest('[data-copy-note]');
+
+  if(callBtn){
+    e.stopPropagation();
+    window.location.assign('tel:'+callBtn.dataset.call.replace(/\s+/g,''));
+    return;
+  }
+
+  if(copyLink){
+    e.stopPropagation();
+    navigator.clipboard.writeText(copyLink.dataset.copyLink);
+    toast('Group link copied to clipboard');
+    return;
+  }
+
+  if(copyNote){
+    e.stopPropagation();
+    const note=(await records()).find(r=>r.id===copyNote.dataset.copyNote);
+    if(note){
+      navigator.clipboard.writeText(note.name+'\n\n'+(note.body||''));
+      toast('Note copied to clipboard');
+    }
+    return;
+  }
 
   if(cycle){
     e.stopPropagation();

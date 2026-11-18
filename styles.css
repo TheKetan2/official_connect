@@ -735,3 +735,6 @@ body.theme-dark .lock-card h2{color:#ffffff}
 body.theme-dark .key-btn{background:var(--card-bg);border-color:var(--line);color:#ffffff}
 body.theme-dark .key-btn:active{background:var(--green2)}
 body.theme-dark .key-btn.special-key{color:#9ab3a6}
+
+.mini-btn.call{background:#e0f2fe;color:#0369a1}
+body.theme-dark .mini-btn.call{background:#0c4a6e;color:#7dd3fc}
