@@ -32,7 +32,25 @@ function go(page){currentPage=page;$$('.page').forEach(p=>p.classList.toggle('ac
 function empty(title,desc){return `<div class="empty"><b>${title}</b>${desc}</div>`}
 function initials(name=''){return name.trim().split(/\s+/).slice(0,2).map(x=>x[0]||'').join('').toUpperCase()||'•'}
 function waContact(phone,text=''){let p=phone.replace(/\D/g,'');if(p.length===10)p='91'+p;let url='https://wa.me/'+p;if(text)url+='?text='+encodeURIComponent(text);return url}
-function launchGroup(url){try{const u=new URL(url);if(u.protocol!=='https:'||u.hostname!=='chat.whatsapp.com'){toast('This is not a valid WhatsApp group link.');return}window.location.assign(u.href)}catch{toast('Add a valid WhatsApp group invitation link first.')}}
+function launchGroup(item){
+  const link=(typeof item==='string'?item:item?.link)||'';
+  if(!link||link==='private'||link==='#'||link.startsWith('whatsapp://')){
+    if(item?.adminPhone){
+      const text=`Regarding ${item.name||'official group'}`;
+      launchContact(item.adminPhone, text);
+      return;
+    }
+    window.location.assign('whatsapp://');
+    toast(`Opening WhatsApp for ${item?.name||'private group'}...`);
+    return;
+  }
+  try{
+    const u=new URL(link.startsWith('http')?link:'https://'+link);
+    window.location.assign(u.href);
+  }catch{
+    window.location.assign('whatsapp://');
+  }
+}
 function launchContact(phone,text=''){const digits=String(phone||'').replace(/\D/g,'');if(!digits){toast('Add a phone number first.');return}window.location.assign(waContact(phone,text))}
 
 // Theme Initializer
@@ -92,13 +110,26 @@ function itemCard(x,type){
     if(gMatch) vcBadgeGroup=`<a href="${esc(gMatch[0])}" target="_blank" rel="noopener noreferrer" class="vc-badge" style="margin-top:4px;">📹 Join Meeting</a>`;
   }
 
-  let subtitle=[x.designation,x.department].filter(Boolean).join(' · ')||x.category||'';
+  const isPrivateGroup=type==='group'&&(!x.link||x.link==='private');
+  let subtitle=isPrivateGroup
+    ? [x.department,'🔒 Private Group'].filter(Boolean).join(' · ')
+    : [x.designation,x.department].filter(Boolean).join(' · ')||x.category||'';
+
+  let groupActions=`<button class="mini-btn ${x.favorite?'star':''}" data-fav="${x.id}" title="${x.favorite?'Remove favourite':'Add favourite'}">${x.favorite?'★':'☆'}</button>`;
+  if(x.link&&x.link!=='private'){
+    groupActions+=`<button class="mini-btn" data-copy-link="${esc(x.link)}" title="Copy group invite link">🔗</button>`;
+  }
+  if(x.adminPhone){
+    groupActions+=`<button class="mini-btn call" data-call="${esc(x.adminPhone)}" title="Call Group Admin">📞</button>`;
+  }
+  groupActions+=`<button class="mini-btn" data-edit="${x.id}" title="Edit">✎</button><button class="mini-btn open" data-open="${x.id}" title="${isPrivateGroup?'Open in WhatsApp':'Open group invitation'}">↗</button>`;
+
   let actions=type==='contact'
     ? `<button class="mini-btn ${x.favorite?'star':''}" data-fav="${x.id}" title="${x.favorite?'Remove favourite':'Add favourite'}">${x.favorite?'★':'☆'}</button><button class="mini-btn msg" data-dispatch="${x.id}" title="Formal message dispatch">✉</button><button class="mini-btn call" data-call="${esc(x.phone)}" title="Direct voice call">📞</button><button class="mini-btn" data-edit="${x.id}" title="Edit">✎</button><button class="mini-btn open" data-open="${x.id}" title="Open blank WhatsApp chat">↗</button>`
-    : `<button class="mini-btn ${x.favorite?'star':''}" data-fav="${x.id}" title="${x.favorite?'Remove favourite':'Add favourite'}">${x.favorite?'★':'☆'}</button><button class="mini-btn" data-copy-link="${esc(x.link)}" title="Copy group invite link">🔗</button><button class="mini-btn" data-edit="${x.id}" title="Edit">✎</button><button class="mini-btn open" data-open="${x.id}" title="Open in WhatsApp">↗</button>`;
+    : groupActions;
 
   return `<article class="item-card">
-    <div class="item-icon">${type==='group'?'▤':initials(x.name)}</div>
+    <div class="item-icon">${type==='group'?(isPrivateGroup?'🔒':'▤'):initials(x.name)}</div>
     <div class="item-main">
       <div class="item-title">${esc(x.name||'Untitled')}</div>
       <div class="item-sub">${esc(subtitle)}</div>
@@ -163,7 +194,7 @@ async function render(){
 }
 
 const schemas={
-  group:{title:'Add official group',fields:[['name','Group name','text',true],['department','Department / category','text',false],['link','WhatsApp invite link','text',true]],hint:'Paste the group invitation URL (usually chat.whatsapp.com/…).'},
+  group:{title:'Add official group',fields:[['name','Group name','text',true],['department','Department / category','text',false],['link','WhatsApp invite link (optional for private groups)','text',false],['adminPhone','Group Admin / Lead Phone (optional)','tel',false]],hint:'For public groups, paste chat.whatsapp.com/… link. For private groups without an invite link, leave blank or add Admin phone.'},
   contact:{title:'Add important contact',fields:[['name','Full name','text',true],['designation','Designation','text',false],['department','Department / office','text',false],['phone','Mobile number with country code','tel',true]],hint:'For Indian numbers, enter 10 digits or include +91.'},
   note:{title:'Add work note',fields:[['name','Note title','text',true],['status','Status','select',true,[['unfinished','⏳ Unfinished'],['in_progress','🔄 In Progress'],['finished','✅ Finished']]],['category','Category / Tag','text',false],['body','Note details','textarea',true]]}
 };
@@ -218,17 +249,29 @@ $('#editorForm').addEventListener('submit',async e=>{
   if(type==='note'&&!obj.status) obj.status='unfinished';
   if(type!=='note')obj.favorite=fd.get('favorite')==='on';
   if(type==='group'){
-    if(!/^https?:\/\//i.test(obj.link))obj.link='https://'+obj.link;
-    try{
-      const u=new URL(obj.link);
-      if(u.protocol!=='https:'||u.hostname!=='chat.whatsapp.com'||u.pathname.length<2){
-        toast('Use a valid https://chat.whatsapp.com/ invitation link.');
+    if(obj.link){
+      if(!/^https?:\/\//i.test(obj.link)&&!obj.link.startsWith('whatsapp://')) obj.link='https://'+obj.link;
+      try{
+        const u=new URL(obj.link);
+        if(u.hostname==='chat.whatsapp.com'||obj.link.startsWith('whatsapp://')){
+          obj.link=u.href;
+        } else {
+          toast('Use a valid chat.whatsapp.com link, or leave blank for a private group.');
+          return;
+        }
+      }catch{
+        toast('Please enter a valid link or leave blank for private group.');
         return;
       }
-      obj.link=u.href;
-    }catch{
-      toast('Please enter a valid WhatsApp group invitation link.');
-      return;
+    } else {
+      obj.link='private';
+    }
+    if(obj.adminPhone){
+      const digits=obj.adminPhone.replace(/\D/g,'');
+      if(digits.length<10){
+        toast('Enter a valid 10-digit mobile number for Admin phone.');
+        return;
+      }
     }
   }
   if(type==='contact'){
@@ -798,7 +841,7 @@ document.addEventListener('click',async e=>{
   if(goEl)go(goEl.dataset.go);
   if(edit){const x=(await records()).find(r=>r.id===edit.dataset.edit);if(x)openEditor(x.type,x)}
   if(fav){const x=(await records()).find(r=>r.id===fav.dataset.fav);if(x){x.favorite=!x.favorite;await put(x);render();toast(x.favorite?'Added to Favourites':'Removed from Favourites')}}
-  if(op){const x=(await records()).find(r=>r.id===op.dataset.open);if(x?.type==='group')launchGroup(x.link);if(x?.type==='contact')launchContact(x.phone)}
+  if(op){const x=(await records()).find(r=>r.id===op.dataset.open);if(x?.type==='group')launchGroup(x);if(x?.type==='contact')launchContact(x.phone)}
 });
 
 $$('.nav-item').forEach(n=>n.addEventListener('click',()=>go(n.dataset.page)));
