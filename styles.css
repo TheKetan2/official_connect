@@ -3,3 +3,13 @@
 @media(min-width:600px){.main-content{padding:30px 34px}.topbar{padding:0 34px}.greeting{padding-top:25px}.greeting h1{font-size:38px}}
 
 .danger-btn{border:0;border-radius:12px;padding:12px 14px;background:#fff0ee;color:#b33b31;font-size:12px;font-weight:700;cursor:pointer}.modal-spacer{flex:1}.mini-btn:focus-visible,.primary-btn:focus-visible,.secondary-btn:focus-visible,.nav-item:focus-visible{outline:3px solid #9ac8b6;outline-offset:2px}.item-card{overflow:hidden}.item-actions{flex:none}button{ -webkit-tap-highlight-color:transparent }
+
+.import-button-row{display:flex;gap:8px;margin:10px 0 16px;flex-wrap:wrap}
+.import-card{border:1px solid var(--line);border-radius:14px;padding:12px;background:#fafcfb;display:grid;gap:8px}
+.import-header{display:flex;justify-content:space-between;align-items:center}
+.import-badge{font-size:10px;font-weight:800;padding:3px 8px;border-radius:8px;letter-spacing:.5px;text-transform:uppercase}
+.import-badge.group{background:#e0f2fe;color:#0369a1}
+.import-badge.contact{background:#fef3c7;color:#b45309}
+.import-fields{display:grid;gap:6px}
+.import-fields input{padding:8px 10px;font-size:12px;border:1px solid var(--line);border-radius:8px;width:100%;font-family:inherit;background:#fff;color:var(--ink)}
+.import-card-actions{display:flex;justify-content:flex-end;gap:6px;margin-top:2px}

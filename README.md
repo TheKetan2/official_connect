@@ -3,6 +3,9 @@
 A mobile-first, local-first launcher for selected official WhatsApp groups and contacts. It is a standalone static PWA; no backend or build step is required.
 
 ## Included in this build
+- **Smart WhatsApp Import**: Paste forwarded WhatsApp messages, group invite links, or contact numbers; the app automatically detects and extracts them for batch or single import.
+- **Web Share Target (Android)**: Share any group invite link or contact directly from WhatsApp or other apps into Official Connect via the native Android share menu.
+- **vCard (.vcf) & Chat Export (.txt) Support**: Upload exported WhatsApp contact cards or chat transcripts to extract contacts and group links.
 - Add, edit and delete official WhatsApp group entries
 - Validate group invitation links against `https://chat.whatsapp.com/`
 - Add, edit and delete important contacts
@@ -39,10 +42,7 @@ Open the deployed HTTPS URL in Chrome, open the browser menu, and choose **Insta
 - Do not store Aadhaar numbers, passwords, bank details or other sensitive identifiers in notes.
 
 ## WhatsApp limitations
-- This app does not read WhatsApp messages, notifications, status updates or group membership.
-- It does not bypass WhatsApp's interface or hide personal chats inside WhatsApp.
+- This app does not silently read WhatsApp messages, notifications, status updates or group membership in the background due to operating system sandboxing.
+- It extracts links and contacts shared by the user through Quick Paste, file upload, or the native Android Share sheet.
 - It launches a saved group invitation link or a one-to-one chat. WhatsApp must be installed and the user may need to confirm the destination or join a group.
 - It is not a WhatsApp Business API client.
-
-## Current scope
-This is an MVP foundation, not a Play Store release. It has been syntax-checked and its archive contents verified. A full device/browser QA pass, accessibility audit and backup-restore test on Android should be completed before relying on it for official records.

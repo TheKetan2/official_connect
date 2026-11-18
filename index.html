@@ -10,7 +10,10 @@
   <div class="app-shell">
     <header class="topbar">
       <div class="brand"><div class="brand-mark">OC</div><div><div class="brand-name">Official Connect</div><div class="brand-sub">Your work. Your channels.</div></div></div>
-      <button class="icon-btn" id="backupBtn" title="Backup and restore" aria-label="Backup and restore">⇧</button>
+      <div style="display:flex;gap:8px;">
+        <button class="icon-btn" id="openImportBtn" title="Import from WhatsApp" aria-label="Import from WhatsApp">📥</button>
+        <button class="icon-btn" id="backupBtn" title="Backup and restore" aria-label="Backup and restore">⇧</button>
+      </div>
     </header>
     <main id="main" class="main-content">
       <section id="page-home" class="page active">
@@ -22,8 +25,8 @@
         <div class="browse-grid"><button class="browse-tile" data-go="groups"><span>▤</span><b>Groups</b><small>Official WhatsApp groups</small></button><button class="browse-tile" data-go="contacts"><span>♙</span><b>Contacts</b><small>People you work with</small></button><button class="browse-tile" data-go="favourites"><span>★</span><b>Favourites</b><small>Your priority list</small></button><button class="browse-tile" data-go="notes"><span>▧</span><b>Notes</b><small>Useful work information</small></button></div>
         <div class="privacy-note"><span>⌑</span><div><b>Private by design</b><small>Your directory and notes stay on this device. WhatsApp messages remain in WhatsApp.</small></div></div>
       </section>
-      <section id="page-groups" class="page"><div class="page-head"><div><div class="eyebrow">DIRECTORY</div><h1>Official groups</h1><p>Open only the WhatsApp groups you need.</p></div><button class="primary-btn" id="addGroup">＋ Add</button></div><div class="search-wrap"><span>⌕</span><input id="groupSearch" placeholder="Search groups or departments"></div><div id="groupsList" class="stack"></div></section>
-      <section id="page-contacts" class="page"><div class="page-head"><div><div class="eyebrow">DIRECTORY</div><h1>Important contacts</h1><p>Keep key officials one tap away.</p></div><button class="primary-btn" id="addContact">＋ Add</button></div><div class="search-wrap"><span>⌕</span><input id="contactSearch" placeholder="Search name, designation or department"></div><div id="contactsList" class="stack"></div></section>
+      <section id="page-groups" class="page"><div class="page-head"><div><div class="eyebrow">DIRECTORY</div><h1>Official groups</h1><p>Open only the WhatsApp groups you need.</p></div><div style="display:flex;gap:8px;"><button class="secondary-btn" data-action="quick-import">📥 Import</button><button class="primary-btn" id="addGroup">＋ Add</button></div></div><div class="search-wrap"><span>⌕</span><input id="groupSearch" placeholder="Search groups or departments"></div><div id="groupsList" class="stack"></div></section>
+      <section id="page-contacts" class="page"><div class="page-head"><div><div class="eyebrow">DIRECTORY</div><h1>Important contacts</h1><p>Keep key officials one tap away.</p></div><div style="display:flex;gap:8px;"><button class="secondary-btn" data-action="quick-import">📥 Import</button><button class="primary-btn" id="addContact">＋ Add</button></div></div><div class="search-wrap"><span>⌕</span><input id="contactSearch" placeholder="Search name, designation or department"></div><div id="contactsList" class="stack"></div></section>
       <section id="page-favourites" class="page"><div class="page-head"><div><div class="eyebrow">PRIORITY ACCESS</div><h1>Favourites</h1><p>Your most frequently used groups and contacts.</p></div></div><div id="favouritesList" class="stack"></div></section>
       <section id="page-notes" class="page"><div class="page-head"><div><div class="eyebrow">PERSONAL WORKSPACE</div><h1>Work notes</h1><p>Keep important details close at hand.</p></div><button class="primary-btn" id="addNote">＋ Add</button></div><div class="search-wrap"><span>⌕</span><input id="noteSearch" placeholder="Search your notes"></div><div id="notesList" class="stack"></div></section>
     </main>
@@ -31,6 +34,12 @@
   </div>
   <dialog id="editor"><form method="dialog" id="editorForm"><div class="modal-head"><div><div class="eyebrow" id="modalEyebrow">NEW ENTRY</div><h2 id="modalTitle">Add group</h2></div><button type="button" class="icon-btn" id="closeModal">×</button></div><div id="formFields"></div><div class="modal-actions"><button type="button" class="danger-btn" id="deleteEntry" hidden>Delete</button><span class="modal-spacer"></span><button type="button" class="secondary-btn" id="cancelModal">Cancel</button><button type="submit" class="primary-btn">Save</button></div></form></dialog>
   <dialog id="backupDialog"><div class="modal-head"><div><div class="eyebrow">YOUR DATA</div><h2>Backup & restore</h2></div><button class="icon-btn" id="closeBackup">×</button></div><p class="muted">Export your groups, contacts, favourites and notes to a JSON file. Keep the file somewhere safe.</p><div class="backup-actions"><button class="primary-btn full" id="exportBtn">↓ Export backup</button><label class="secondary-btn full file-label">↑ Import backup<input type="file" id="importFile" accept="application/json,.json" hidden></label></div><p class="tiny-warning">Importing a backup replaces the data currently stored in this app.</p></dialog>
+  <dialog id="importDialog"><div class="modal-head"><div><div class="eyebrow">WHATSAPP IMPORT</div><h2>Import from WhatsApp</h2></div><button class="icon-btn" id="closeImport">×</button></div><p class="muted">Paste forwarded WhatsApp messages, group invite links, phone numbers, or upload a .vcf contact file / chat export .txt.</p><div class="field"><label for="importTextInput">Paste message or text</label><textarea id="importTextInput" placeholder="Example:
+Follow this link to join my WhatsApp group:
+https://chat.whatsapp.com/AbCdEfGh1234567890
+
+Or contact details:
+Dr. Ramesh Sharma, Director: +91 98765 43210"></textarea></div><div class="import-button-row"><button type="button" class="primary-btn" id="parseTextBtn">⚡ Detect & Extract</button><label class="secondary-btn file-label" style="display:inline-flex;align-items:center;">📁 Upload .vcf or .txt<input type="file" id="importContactFile" accept=".vcf,.txt,text/vcard,text/plain" hidden></label></div><div id="importResults" class="stack" style="margin-top:16px;"></div><div class="modal-actions" id="importActions" style="display:none;"><button type="button" class="secondary-btn" id="clearImportBtn">Clear</button><button type="button" class="primary-btn" id="saveAllImportBtn">Import All Detected</button></div></dialog>
   <div id="toast" class="toast" role="status"></div>
   <script src="app.js"></script>
 </body></html>
