@@ -1,7 +1,14 @@
 const DB_NAME='official-connect-db', STORE='records';
-let db, currentPage='home', editing=null, toastTimer, detectedItems=[];
+let db, currentPage='home', editing=null, toastTimer, detectedItems=[], currentNoteFilter='all';
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const uid=()=>crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2);
+
+const STATUS_CONFIG={
+  unfinished:{label:'Unfinished', class:'unfinished', next:'in_progress', dot:'#f59e0b'},
+  in_progress:{label:'In Progress', class:'in_progress', next:'finished', dot:'#3b82f6'},
+  finished:{label:'Finished', class:'finished', next:'unfinished', dot:'#10b981'}
+};
+
 function openDB(){return new Promise((resolve,reject)=>{const r=indexedDB.open(DB_NAME,1);r.onupgradeneeded=()=>r.result.createObjectStore(STORE,{keyPath:'id'});r.onsuccess=()=>{db=r.result;resolve(db)};r.onerror=()=>reject(r.error)})}
 function all(){return new Promise((resolve,reject)=>{const r=db.transaction(STORE).objectStore(STORE).getAll();r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)})}
 function put(item){return new Promise((resolve,reject)=>{const r=db.transaction(STORE,'readwrite').objectStore(STORE).put(item);r.onsuccess=resolve;r.onerror=()=>reject(r.error)})}
@@ -15,23 +22,139 @@ function initials(name=''){return name.trim().split(/\s+/).slice(0,2).map(x=>x[0
 function waContact(phone){let p=phone.replace(/\D/g,'');if(p.length===10)p='91'+p;return 'https://wa.me/'+p}
 function launchGroup(url){try{const u=new URL(url);if(u.protocol!=='https:'||u.hostname!=='chat.whatsapp.com'){toast('This is not a valid WhatsApp group link.');return}window.location.assign(u.href)}catch{toast('Add a valid WhatsApp group invitation link first.')}}
 function launchContact(phone){const digits=String(phone||'').replace(/\D/g,'');if(!digits){toast('Add a phone number first.');return}window.location.assign(waContact(phone))}
-function itemCard(x,type){const isNote=type==='note';let subtitle=isNote?(x.category||'Personal note'):[x.designation,x.department].filter(Boolean).join(' · ')||x.category||'';let actions=isNote?`<button class="mini-btn" data-edit="${x.id}" title="Edit">✎</button>`:`<button class="mini-btn ${x.favorite?'star':''}" data-fav="${x.id}" title="${x.favorite?'Remove favourite':'Add favourite'}">${x.favorite?'★':'☆'}</button><button class="mini-btn" data-edit="${x.id}" title="Edit">✎</button><button class="mini-btn open" data-open="${x.id}" title="Open in WhatsApp">↗</button>`;return `<article class="item-card ${isNote?'note-card':''}"><div class="item-icon">${isNote?'▧':type==='group'?'▤':initials(x.name)}</div><div class="item-main"><div class="item-title">${esc(x.name||'Untitled')}</div><div class="item-sub">${esc(subtitle)}</div>${isNote?`<div class="note-body">${esc(x.body||'')}</div><div class="note-meta">Updated ${new Date(x.updated||Date.now()).toLocaleDateString()}</div>`:''}</div><div class="item-actions">${actions}</div></article>`}
-async function render(){const data=await records(),groups=data.filter(x=>x.type==='group'),contacts=data.filter(x=>x.type==='contact'),notes=data.filter(x=>x.type==='note'),favs=data.filter(x=>x.favorite&&x.type!=='note');$('#groupCount').textContent=groups.length;$('#contactCount').textContent=contacts.length;
-const favMarkup=favs.slice(0,4).map(x=>itemCard(x,x.type)).join('');$('#homeFavourites').innerHTML=favMarkup||empty('Nothing pinned yet','Add a group or contact to Favourites for quick access.');
-const filter=(arr,q)=>arr.filter(x=>(x.name+' '+(x.department||'')+' '+(x.designation||'')+' '+(x.category||'')+' '+(x.body||'')).toLowerCase().includes(q.toLowerCase()));
-$('#groupsList').innerHTML=filter(groups,$('#groupSearch').value).map(x=>itemCard(x,'group')).join('')||empty('No groups added','Add a WhatsApp group invitation link to get started.');
-$('#contactsList').innerHTML=filter(contacts,$('#contactSearch').value).map(x=>itemCard(x,'contact')).join('')||empty('No contacts added','Add important officials and colleagues here.');
-$('#favouritesList').innerHTML=favs.map(x=>itemCard(x,x.type)).join('')||empty('Your priority list is empty','Tap the star on any group or contact to pin it here.');
-$('#notesList').innerHTML=filter(notes,$('#noteSearch').value).sort((a,b)=>(b.updated||0)-(a.updated||0)).map(x=>itemCard(x,'note')).join('')||empty('No notes yet','Save important reference details, reminders and work information.');}
 
-const schemas={group:{title:'Add official group',fields:[['name','Group name','text',true],['department','Department / category','text',false],['link','WhatsApp invite link','text',true]],hint:'Paste the group invitation URL (usually chat.whatsapp.com/…).'},contact:{title:'Add important contact',fields:[['name','Full name','text',true],['designation','Designation','text',false],['department','Department / office','text',false],['phone','Mobile number with country code','tel',true]],hint:'For Indian numbers, enter 10 digits or include +91.'},note:{title:'Add work note',fields:[['name','Note title','text',true],['category','Category','text',false],['body','Note details','textarea',true]]}};
+function itemCard(x,type){
+  const isNote=type==='note';
+  if(isNote){
+    const stKey=x.status||'unfinished';
+    const st=STATUS_CONFIG[stKey]||STATUS_CONFIG.unfinished;
+    const statusBadge=`<button type="button" class="status-badge ${st.class}" data-cycle-status="${x.id}" title="Current status: ${st.label}. Click to cycle status."><span class="status-dot"></span>${st.label}</button>`;
+    return `<article class="item-card note-card status-${stKey}">
+      <div class="item-icon">▧</div>
+      <div class="item-main">
+        <div class="note-top">
+          <div class="item-title">${esc(x.name||'Untitled')}</div>
+          ${statusBadge}
+        </div>
+        <div class="item-sub">${esc(x.category||'Personal note')}</div>
+        <div class="note-body">${esc(x.body||'')}</div>
+        <div class="note-meta">Updated ${new Date(x.updated||Date.now()).toLocaleDateString()}</div>
+      </div>
+      <div class="item-actions">
+        <button class="mini-btn" data-edit="${x.id}" title="Edit">✎</button>
+      </div>
+    </article>`;
+  }
 
-function openEditor(type,item=null){editing={type,id:item?.id||null};const s=schemas[type];$('#modalEyebrow').textContent=item?'EDIT ENTRY':'NEW ENTRY';$('#modalTitle').textContent=item?'Edit '+type:s.title;$('#formFields').innerHTML=s.fields.map(([key,label,input,required])=>`<div class="field"><label for="f-${key}">${label}${required?' *':''}</label>${input==='textarea'?`<textarea id="f-${key}" name="${key}" ${required?'required':''}>${esc(item?.[key]||'')}</textarea>`:`<input id="f-${key}" name="${key}" type="${input}" value="${esc(item?.[key]||'')}" ${required?'required':''} ${key==='phone'?'inputmode="tel"':key==='link'?'inputmode="url" autocapitalize="none"':''}>`}</div>`).join('')+`<div class="field-hint">${s.hint||''}</div>`+(type!=='note'?`<label class="check-row"><input type="checkbox" name="favorite" ${item?.favorite?'checked':''}> Add to Favourites</label>`:'');$('#deleteEntry').hidden=!item;$('#editor').showModal()}
+  let subtitle=[x.designation,x.department].filter(Boolean).join(' · ')||x.category||'';
+  let actions=`<button class="mini-btn ${x.favorite?'star':''}" data-fav="${x.id}" title="${x.favorite?'Remove favourite':'Add favourite'}">${x.favorite?'★':'☆'}</button><button class="mini-btn" data-edit="${x.id}" title="Edit">✎</button><button class="mini-btn open" data-open="${x.id}" title="Open in WhatsApp">↗</button>`;
+  return `<article class="item-card">
+    <div class="item-icon">${type==='group'?'▤':initials(x.name)}</div>
+    <div class="item-main">
+      <div class="item-title">${esc(x.name||'Untitled')}</div>
+      <div class="item-sub">${esc(subtitle)}</div>
+    </div>
+    <div class="item-actions">${actions}</div>
+  </article>`;
+}
 
-$('#editorForm').addEventListener('submit',async e=>{e.preventDefault();const type=editing.type,fd=new FormData(e.currentTarget),obj={type,id:editing.id||uid(),updated:Date.now()};schemas[type].fields.forEach(([k])=>obj[k]=String(fd.get(k)||'').trim());if(type!=='note')obj.favorite=fd.get('favorite')==='on';if(type==='group'){if(!/^https?:\/\//i.test(obj.link))obj.link='https://'+obj.link;try{const u=new URL(obj.link);if(u.protocol!=='https:'||u.hostname!=='chat.whatsapp.com'||u.pathname.length<2){toast('Use a valid https://chat.whatsapp.com/ invitation link.');return}obj.link=u.href}catch{toast('Please enter a valid WhatsApp group invitation link.');return}}if(type==='contact'){const digits=obj.phone.replace(/\D/g,'');if(!/^(?:[6-9]\d{9}|91[6-9]\d{9})$/.test(digits)){toast('Enter a valid Indian mobile number (10 digits or +91).');return}}await put(obj);$('#editor').close();e.target.reset();toast('Saved successfully');render()});
+async function render(){
+  const data=await records(),groups=data.filter(x=>x.type==='group'),contacts=data.filter(x=>x.type==='contact'),notes=data.filter(x=>x.type==='note'),favs=data.filter(x=>x.favorite&&x.type!=='note');
+  $('#groupCount').textContent=groups.length;
+  $('#contactCount').textContent=contacts.length;
+
+  const favMarkup=favs.slice(0,4).map(x=>itemCard(x,x.type)).join('');
+  $('#homeFavourites').innerHTML=favMarkup||empty('Nothing pinned yet','Add a group or contact to Favourites for quick access.');
+
+  const filter=(arr,q)=>arr.filter(x=>(x.name+' '+(x.department||'')+' '+(x.designation||'')+' '+(x.category||'')+' '+(x.body||'')).toLowerCase().includes(q.toLowerCase()));
+  $('#groupsList').innerHTML=filter(groups,$('#groupSearch').value).map(x=>itemCard(x,'group')).join('')||empty('No groups added','Add a WhatsApp group invitation link to get started.');
+  $('#contactsList').innerHTML=filter(contacts,$('#contactSearch').value).map(x=>itemCard(x,'contact')).join('')||empty('No contacts added','Add important officials and colleagues here.');
+  $('#favouritesList').innerHTML=favs.map(x=>itemCard(x,x.type)).join('')||empty('Your priority list is empty','Tap the star on any group or contact to pin it here.');
+
+  // Note status counts and filtering
+  const cAll=$('#count-all'), cUnfin=$('#count-unfinished'), cInp=$('#count-in_progress'), cFin=$('#count-finished');
+  if(cAll) cAll.textContent=notes.length;
+  if(cUnfin) cUnfin.textContent=notes.filter(n=>(n.status||'unfinished')==='unfinished').length;
+  if(cInp) cInp.textContent=notes.filter(n=>n.status==='in_progress').length;
+  if(cFin) cFin.textContent=notes.filter(n=>n.status==='finished').length;
+
+  const notesMatchingStatus=currentNoteFilter==='all'?notes:notes.filter(n=>(n.status||'unfinished')===currentNoteFilter);
+  $('#notesList').innerHTML=filter(notesMatchingStatus,$('#noteSearch').value).sort((a,b)=>(b.updated||0)-(a.updated||0)).map(x=>itemCard(x,'note')).join('')||empty('No notes found',currentNoteFilter!=='all'?`No notes currently marked as "${STATUS_CONFIG[currentNoteFilter]?.label}".`:'Save important reference details, reminders and work information.');
+}
+
+const schemas={
+  group:{title:'Add official group',fields:[['name','Group name','text',true],['department','Department / category','text',false],['link','WhatsApp invite link','text',true]],hint:'Paste the group invitation URL (usually chat.whatsapp.com/…).'},
+  contact:{title:'Add important contact',fields:[['name','Full name','text',true],['designation','Designation','text',false],['department','Department / office','text',false],['phone','Mobile number with country code','tel',true]],hint:'For Indian numbers, enter 10 digits or include +91.'},
+  note:{title:'Add work note',fields:[['name','Note title','text',true],['status','Status','select',true,[['unfinished','⏳ Unfinished'],['in_progress','🔄 In Progress'],['finished','✅ Finished']]],['category','Category / Tag','text',false],['body','Note details','textarea',true]]}
+};
+
+function openEditor(type,item=null){
+  editing={type,id:item?.id||null};
+  const s=schemas[type];
+  $('#modalEyebrow').textContent=item?'EDIT ENTRY':'NEW ENTRY';
+  $('#modalTitle').textContent=item?'Edit '+type:s.title;
+  $('#formFields').innerHTML=s.fields.map(([key,label,input,required,options])=>{
+    if(input==='textarea'){
+      return `<div class="field"><label for="f-${key}">${label}${required?' *':''}</label><textarea id="f-${key}" name="${key}" ${required?'required':''}>${esc(item?.[key]||'')}</textarea></div>`;
+    }
+    if(input==='select'){
+      const curVal=item?.[key]||(key==='status'?'unfinished':'');
+      const optHtml=(options||[]).map(([v,t])=>`<option value="${v}" ${curVal===v?'selected':''}>${t}</option>`).join('');
+      return `<div class="field"><label for="f-${key}">${label}${required?' *':''}</label><select id="f-${key}" name="${key}">${optHtml}</select></div>`;
+    }
+    return `<div class="field"><label for="f-${key}">${label}${required?' *':''}</label><input id="f-${key}" name="${key}" type="${input}" value="${esc(item?.[key]||'')}" ${required?'required':''} ${key==='phone'?'inputmode="tel"':key==='link'?'inputmode="url" autocapitalize="none"':''}></div>`;
+  }).join('')+`<div class="field-hint">${s.hint||''}</div>`+(type!=='note'?`<label class="check-row"><input type="checkbox" name="favorite" ${item?.favorite?'checked':''}> Add to Favourites</label>`:'');
+  $('#deleteEntry').hidden=!item;
+  $('#editor').showModal();
+}
+
+$('#editorForm').addEventListener('submit',async e=>{
+  e.preventDefault();
+  const type=editing.type,fd=new FormData(e.currentTarget),obj={type,id:editing.id||uid(),updated:Date.now()};
+  schemas[type].fields.forEach(([k])=>obj[k]=String(fd.get(k)||'').trim());
+  if(type==='note'&&!obj.status) obj.status='unfinished';
+  if(type!=='note')obj.favorite=fd.get('favorite')==='on';
+  if(type==='group'){
+    if(!/^https?:\/\//i.test(obj.link))obj.link='https://'+obj.link;
+    try{
+      const u=new URL(obj.link);
+      if(u.protocol!=='https:'||u.hostname!=='chat.whatsapp.com'||u.pathname.length<2){
+        toast('Use a valid https://chat.whatsapp.com/ invitation link.');
+        return;
+      }
+      obj.link=u.href;
+    }catch{
+      toast('Please enter a valid WhatsApp group invitation link.');
+      return;
+    }
+  }
+  if(type==='contact'){
+    const digits=obj.phone.replace(/\D/g,'');
+    if(!/^(?:[6-9]\d{9}|91[6-9]\d{9})$/.test(digits)){
+      toast('Enter a valid Indian mobile number (10 digits or +91).');
+      return;
+    }
+  }
+  await put(obj);
+  $('#editor').close();
+  e.target.reset();
+  toast('Saved successfully');
+  render();
+});
+
 $('#closeModal').onclick=$('#cancelModal').onclick=()=>$('#editor').close();
-$('#deleteEntry').onclick=async()=>{if(!editing?.id)return;if(!confirm('Delete this entry from Official Connect? This will not affect WhatsApp.'))return;await del(editing.id);$('#editor').close();toast('Entry deleted');render()};
-$('#addGroup').onclick=()=>openEditor('group');$('#addContact').onclick=()=>openEditor('contact');$('#addNote').onclick=()=>openEditor('note');
+$('#deleteEntry').onclick=async()=>{
+  if(!editing?.id)return;
+  if(!confirm('Delete this entry from Official Connect? This will not affect WhatsApp.'))return;
+  await del(editing.id);
+  $('#editor').close();
+  toast('Entry deleted');
+  render();
+};
+
+$('#addGroup').onclick=()=>openEditor('group');
+$('#addContact').onclick=()=>openEditor('contact');
+$('#addNote').onclick=()=>openEditor('note');
 
 // Smart WhatsApp Parser & Importer
 function openImportModal(initialText=''){const dlg=$('#importDialog');if(!dlg)return;if(initialText){$('#importTextInput').value=initialText;parseImportText(initialText)}dlg.showModal()}
@@ -42,7 +165,6 @@ function parseImportText(text=''){
   const lines=text.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
   const foundGroupLinks=new Set(), foundPhones=new Set();
 
-  // 1. Check for vCard entries
   if(text.includes('BEGIN:VCARD')){
     const vcardBlocks=text.split(/BEGIN:VCARD/i).slice(1);
     for(const block of vcardBlocks){
@@ -63,7 +185,6 @@ function parseImportText(text=''){
     }
   }
 
-  // 2. Scan lines for WhatsApp group invite links
   const groupLinkRegex=/(?:https?:\/\/)?chat\.whatsapp\.com\/(?:invite\/)?([A-Za-z0-9_-]{20,26})/gi;
   lines.forEach((line,idx)=>{
     let match;
@@ -84,7 +205,6 @@ function parseImportText(text=''){
     }
   });
 
-  // 3. Scan lines for Phone numbers / wa.me links
   const waMeRegex=/wa\.me\/(\d{10,13})/gi;
   const phoneRegex=/(?:(?:\+|0{0,2})91[\s-]?)?[6-9]\d{4}[\s-]?\d{5}/g;
 
@@ -228,9 +348,38 @@ $('#importContactFile').onchange=async e=>{
   e.target.value='';
 };
 
+// Filter chip click handler for Work Notes
+const filterGroup=$('#noteStatusFilter');
+if(filterGroup){
+  filterGroup.onclick=e=>{
+    const chip=e.target.closest('.chip');
+    if(!chip) return;
+    $$('#noteStatusFilter .chip').forEach(c=>c.classList.remove('active'));
+    chip.classList.add('active');
+    currentNoteFilter=chip.dataset.filter||'all';
+    render();
+  };
+}
+
 // General click handlers
 document.addEventListener('click',async e=>{
   const goEl=e.target.closest('[data-go]'),edit=e.target.closest('[data-edit]'),fav=e.target.closest('[data-fav]'),op=e.target.closest('[data-open]');
+  const cycle=e.target.closest('[data-cycle-status]');
+
+  if(cycle){
+    e.stopPropagation();
+    const x=(await records()).find(r=>r.id===cycle.dataset.cycleStatus);
+    if(x){
+      const cur=x.status||'unfinished';
+      x.status=STATUS_CONFIG[cur]?.next||'unfinished';
+      x.updated=Date.now();
+      await put(x);
+      toast(`Marked as ${STATUS_CONFIG[x.status].label}`);
+      render();
+    }
+    return;
+  }
+
   if(goEl)go(goEl.dataset.go);
   if(edit){const x=(await records()).find(r=>r.id===edit.dataset.edit);if(x)openEditor(x.type,x)}
   if(fav){const x=(await records()).find(r=>r.id===fav.dataset.fav);if(x){x.favorite=!x.favorite;await put(x);render();toast(x.favorite?'Added to Favourites':'Removed from Favourites')}}
