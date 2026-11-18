@@ -707,6 +707,28 @@ $('#closeBackup').onclick=()=>$('#backupDialog').close();
 $('#exportBtn').onclick=async()=>{const data=await records(),blob=new Blob([JSON.stringify({app:'Official Connect',version:1,exportedAt:new Date().toISOString(),records:data},null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='official-connect-backup-'+new Date().toISOString().slice(0,10)+'.json';a.click();URL.revokeObjectURL(url);toast('Backup exported')};
 $('#importFile').onchange=async e=>{const file=e.target.files[0];if(!file)return;try{const parsed=JSON.parse(await file.text());const validRecord=x=>x&&typeof x.id==='string'&&['group','contact','note'].includes(x.type)&&typeof x.updated==='number'&&(['group','contact','note'].includes(x.type));if(!parsed||parsed.app!=='Official Connect'||!Array.isArray(parsed.records)||!parsed.records.every(validRecord))throw Error('Invalid backup');if(!confirm('Replace all current Official Connect data with this backup?'))return;const tx=db.transaction(STORE,'readwrite'),store=tx.objectStore(STORE);store.clear();parsed.records.forEach(x=>store.put(x));tx.oncomplete=()=>{toast('Backup restored');render()};tx.onerror=()=>toast('Restore failed. Existing data may be unchanged.')}catch(err){toast('Could not import: invalid backup file')}e.target.value=''};
 
+function parseCSVText(text){
+  const rows=[];
+  let row=[''], inQuotes=false;
+  for(let i=0;i<text.length;i++){
+    const char=text[i], next=text[i+1];
+    if(char==='"'){
+      if(inQuotes && next==='"'){row[row.length-1]+='"';i++;}
+      else inQuotes=!inQuotes;
+    }else if(char===',' && !inQuotes){
+      row.push('');
+    }else if((char==='\r'||char==='\n') && !inQuotes){
+      if(char==='\r'&&next==='\n') i++;
+      if(row.length>1||row[0]!=='') rows.push(row);
+      row=[''];
+    }else{
+      row[row.length-1]+=char;
+    }
+  }
+  if(row.length>1||row[0]!=='') rows.push(row);
+  return rows;
+}
+
 // CSV Export and Import for Contacts
 $('#exportCsvBtn').onclick=async()=>{
   const contacts=(await records()).filter(x=>x.type==='contact');
@@ -734,22 +756,21 @@ $('#importCsvFile').onchange=async e=>{
   if(!file) return;
   try{
     const text=await file.text();
-    const lines=text.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
-    if(lines.length<2) throw Error('Empty CSV');
+    const rows=parseCSVText(text);
+    if(rows.length<2) throw Error('Empty CSV');
     let imported=0;
-    for(let i=1;i<lines.length;i++){
-      const cols=lines[i].split(',').map(s=>s.trim().replace(/^"|"$/g,'').replace(/""/g,'"'));
-      const [name, designation, department, phone, fav]=cols;
+    for(let i=1;i<rows.length;i++){
+      const [name, designation, department, phone, fav]=rows[i];
       if(name && phone){
         const digits=phone.replace(/\D/g,'');
         if(digits.length>=10){
           await put({
             type:'contact',
             id:uid(),
-            name,
-            designation:designation||'',
-            department:department||'',
-            phone:phone.startsWith('+')?phone:'+91 '+digits.slice(-10),
+            name:name.trim(),
+            designation:(designation||'').trim(),
+            department:(department||'').trim(),
+            phone:phone.startsWith('+')?phone.trim():'+91 '+digits.slice(-10),
             favorite:String(fav).toLowerCase()==='yes'||String(fav).toLowerCase()==='true',
             updated:Date.now()
           });
@@ -792,19 +813,18 @@ $('#importGroupsCsvFile').onchange=async e=>{
   if(!file) return;
   try{
     const text=await file.text();
-    const lines=text.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
-    if(lines.length<2) throw Error('Empty CSV');
+    const rows=parseCSVText(text);
+    if(rows.length<2) throw Error('Empty CSV');
     let imported=0;
-    for(let i=1;i<lines.length;i++){
-      const cols=lines[i].split(',').map(s=>s.trim().replace(/^"|"$/g,'').replace(/""/g,'"'));
-      const [name, department, link, fav]=cols;
+    for(let i=1;i<rows.length;i++){
+      const [name, department, link, fav]=rows[i];
       if(name && link && link.includes('chat.whatsapp.com/')){
         await put({
           type:'group',
           id:uid(),
-          name,
-          department:department||'',
-          link:link.startsWith('http')?link:'https://'+link,
+          name:name.trim(),
+          department:(department||'').trim(),
+          link:link.startsWith('http')?link.trim():'https://'+link.trim(),
           favorite:String(fav).toLowerCase()==='yes'||String(fav).toLowerCase()==='true',
           updated:Date.now()
         });
@@ -816,6 +836,63 @@ $('#importGroupsCsvFile').onchange=async e=>{
     $('#backupDialog').close();
   }catch(err){
     toast('Could not import Groups CSV: check format.');
+  }
+  e.target.value='';
+};
+
+// CSV Export and Import for Work Notes
+$('#exportNotesCsvBtn').onclick=async()=>{
+  const notes=(await records()).filter(x=>x.type==='note');
+  if(!notes.length){toast('No notes to export.');return}
+  const headers=['Title','Status','Category','Details','Updated'];
+  const rows=notes.map(n=>[
+    `"${(n.name||'').replace(/"/g,'""')}"`,
+    `"${(n.status||'unfinished').replace(/"/g,'""')}"`,
+    `"${(n.category||'').replace(/"/g,'""')}"`,
+    `"${(n.body||'').replace(/"/g,'""')}"`,
+    `"${new Date(n.updated||Date.now()).toISOString()}"`
+  ].join(','));
+  const csvContent=[headers.join(','), ...rows].join('\r\n');
+  const blob=new Blob([csvContent],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob), a=document.createElement('a');
+  a.href=url;
+  a.download='official-work-notes-'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('Work notes CSV exported');
+};
+
+$('#importNotesCsvFile').onchange=async e=>{
+  const file=e.target.files[0];
+  if(!file) return;
+  try{
+    const text=await file.text();
+    const rows=parseCSVText(text);
+    if(rows.length<2) throw Error('Empty CSV');
+    let imported=0;
+    for(let i=1;i<rows.length;i++){
+      const [title, status, category, details]=rows[i];
+      if(title && title.trim()){
+        const cleanStatus=['unfinished','in_progress','finished'].includes(String(status||'').trim().toLowerCase())
+          ? String(status).trim().toLowerCase()
+          : 'unfinished';
+        await put({
+          type:'note',
+          id:uid(),
+          name:title.trim(),
+          status:cleanStatus,
+          category:(category||'').trim(),
+          body:(details||'').trim(),
+          updated:Date.now()
+        });
+        imported++;
+      }
+    }
+    toast(`Imported ${imported} note${imported>1?'s':''} from CSV`);
+    render();
+    $('#backupDialog').close();
+  }catch(err){
+    toast('Could not import Notes CSV: check format.');
   }
   e.target.value='';
 };
